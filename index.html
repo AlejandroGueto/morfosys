@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Morfosys: Código Léxico - 1º Bachillerato</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --neon-primary: #10b981; /* Emerald */
+            --neon-secondary: #f59e0b; /* Amber */
+            --dark-bg: #020617; /* Slate 950 */
+            --panel-bg: #0f172a; /* Slate 900 */
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--dark-bg);
+            color: #cbd5e1;
+            overflow-x: hidden;
+        }
+        .code-font { font-family: 'Fira Code', monospace; }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: var(--dark-bg); }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--neon-primary); }
+
+        /* Animations */
+        .glitch-text { text-shadow: 2px 0 var(--neon-secondary), -2px 0 var(--neon-primary); animation: glitch 2s infinite; }
+        @keyframes glitch {
+            0% { text-shadow: 2px 0 var(--neon-secondary), -2px 0 var(--neon-primary); }
+            5% { text-shadow: -2px 0 var(--neon-secondary), 2px 0 var(--neon-primary); }
+            10% { text-shadow: 2px 0 var(--neon-secondary), -2px 0 var(--neon-primary); }
+            100% { text-shadow: 2px 0 var(--neon-secondary), -2px 0 var(--neon-primary); }
+        }
+        
+        .matrix-overlay {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: linear-gradient(rgba(16, 185, 129, 0.03) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(16, 185, 129, 0.02), rgba(0, 0, 0, 0.01));
+            background-size: 100% 3px, 3px 100%;
+            pointer-events: none; z-index: 50; opacity: 0.4;
+        }
+
+        .module-content { display: none; animation: fadeIn 0.4s ease-out; }
+        .module-content.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .tab-btn.active { border-bottom: 2px solid var(--neon-primary); color: var(--neon-primary); }
+        
+        .interactive-word { cursor: pointer; transition: all 0.2s; border-bottom: 1px dashed #64748b; font-weight: bold; }
+        .interactive-word:hover { color: var(--neon-primary); border-color: var(--neon-primary); }
+        .interactive-word.selected { background: rgba(16, 185, 129, 0.2); color: var(--neon-primary); border: 1px solid var(--neon-primary); padding: 0 4px; border-radius: 4px; }
+        
+        .locked-node { opacity: 0.5; cursor: not-allowed; filter: grayscale(100%); }
+        
+        .video-btn {
+            display: inline-flex; align-items: center; gap: 0.5rem;
+            background-color: #dc2626; color: white; padding: 0.5rem 1rem; border-radius: 0.375rem;
+            font-weight: 600; font-size: 0.875rem; transition: background-color 0.2s; text-decoration: none;
+        }
+        .video-btn:hover { background-color: #b91c1c; }
+    </style>
+</head>
+<body class="flex flex-col h-screen overflow-hidden">
+    <div class="matrix-overlay"></div>
+
+    <!-- Top Navigation Bar -->
+    <header class="bg-slate-900 border-b border-emerald-900 p-4 flex justify-between items-center z-10 shadow-lg">
+        <div class="flex items-center gap-3">
+            <i class="fa-solid fa-code-branch text-emerald-500 text-2xl"></i>
+            <div>
+                <h1 class="font-bold text-xl md:text-2xl code-font text-white tracking-wide">OPERACIÓN<span class="text-emerald-500">MORFOSYS</span></h1>
+                <p class="text-xs text-slate-400">Nivel de Acceso: 1º Bachillerato | Objetivo: Restaurar el Léxico</p>
+            </div>
+        </div>
+        <div class="flex gap-4">
+            <div class="bg-slate-800 px-4 py-2 rounded border border-slate-600 flex items-center gap-2 shadow-inner">
+                <i class="fa-solid fa-terminal text-emerald-400"></i>
+                <span class="code-font text-white tracking-widest font-bold" id="master-code">_ _ _ _</span>
+            </div>
+        </div>
+    </header>
+
+    <div class="flex flex-1 overflow-hidden">
+        <!-- Sidebar Navigation -->
+        <nav class="w-64 bg-slate-900/95 border-r border-slate-800 flex flex-col p-4 z-10 overflow-y-auto hidden md:flex shrink-0">
+            <div class="mb-6">
+                <h2 class="text-xs uppercase text-emerald-600 font-bold tracking-wider mb-3 code-font">>_ ARCHIVOS LÉXICOS</h2>
+                <div class="space-y-2" id="nav-nodes">
+                    <button class="w-full text-left px-4 py-3 rounded bg-emerald-900/30 border border-emerald-600/50 text-emerald-100 flex items-center justify-between transition" onclick="switchNode(0)">
+                        <span><i class="fa-solid fa-satellite-dish w-6"></i> Transmisión</span>
+                    </button>
+                    <button class="w-full text-left px-4 py-3 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-between transition" onclick="switchNode(1)">
+                        <span><i class="fa-solid fa-puzzle-piece w-6"></i> 1. Monemas</span>
+                        <i class="fa-solid fa-lock-open text-xs text-emerald-500"></i>
+                    </button>
+                    <button class="w-full text-left px-4 py-3 rounded bg-slate-800 hover:bg-slate-700 text-slate-400 flex items-center justify-between transition locked-node" id="nav-node-2">
+                        <span><i class="fa-solid fa-object-group w-6"></i> 2. Formación</span>
+                        <i class="fa-solid fa-lock text-xs text-red-500" id="lock-2"></i>
+                    </button>
+                    <button class="w-full text-left px-4 py-3 rounded bg-slate-800 hover:bg-slate-700 text-slate-400 flex items-center justify-between transition locked-node" id="nav-node-3">
+                        <span><i class="fa-solid fa-dna w-6"></i> 3. Parasíntesis</span>
+                        <i class="fa-solid fa-lock text-xs text-red-500" id="lock-3"></i>
+                    </button>
+                    <button class="w-full text-left px-4 py-3 rounded bg-slate-800 hover:bg-slate-700 text-slate-400 flex items-center justify-between transition locked-node" id="nav-node-4">
+                        <span><i class="fa-solid fa-compress text-amber-500 w-6"></i> 4. Siglas y +</span>
+                        <i class="fa-solid fa-lock text-xs text-red-500" id="lock-4"></i>
+                    </button>
+                    <button class="w-full text-left px-4 py-3 rounded bg-amber-900/20 border border-amber-500/30 text-amber-300 flex items-center justify-between transition locked-node mt-4" id="nav-node-5">
+                        <span><i class="fa-solid fa-power-off w-6"></i> NÚCLEO</span>
+                        <i class="fa-solid fa-lock text-xs text-red-500" id="lock-5"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="mt-auto bg-slate-950 p-4 rounded border border-slate-800">
+                <p class="text-xs text-slate-500 mb-1 code-font">>_ Integridad Léxica</p>
+                <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                    <div class="bg-red-500 h-full w-full" id="threat-level" style="transition: width 1s, background-color 1s;"></div>
+                </div>
+                <p class="text-xs text-red-500 mt-1 text-right code-font" id="threat-text">Corrupción: 100%</p>
+            </div>
+        </nav>
+
+        <!-- Main Content Area -->
+        <main class="flex-1 overflow-y-auto p-4 md:p-8 relative">
+            
+            <!-- NODE 0: INTRO -->
+            <div id="node-0" class="module-content active max-w-4xl mx-auto">
+                <div class="bg-slate-900/80 border border-emerald-500/30 p-6 md:p-10 rounded-xl mb-8 shadow-[0_0_20px_rgba(16,185,129,0.1)]">
+                    <h2 class="text-3xl md:text-4xl text-emerald-400 font-bold mb-6 flex items-center gap-3 code-font border-b border-slate-700 pb-4">
+                        <i class="fa-solid fa-tower-broadcast animate-pulse"></i> MENSAJE INTERCEPTADO
+                    </h2>
+                    <div class="space-y-4 text-lg leading-relaxed text-slate-300">
+                        <p>Atención, estudiante. El servidor central de la RAE ha sido infectado por un virus de origen desconocido llamado <strong>"Null-Word"</strong>.</p>
+                        <p>Este malware no borra los diccionarios, hace algo mucho peor: <strong class="text-amber-400">está separando las palabras en sus componentes mínimos y borrando las reglas de cómo se unen</strong>. Los prefijos flotan sin rumbo, los lexemas han perdido su significado original y los sufijos se adhieren a lugares equivocados.</p>
+                        
+                        <div class="bg-slate-950 p-6 rounded-lg border-l-4 border-amber-500 shadow-inner my-6">
+                            <h3 class="text-amber-400 font-bold mb-3 text-xl"><i class="fa-solid fa-triangle-exclamation mr-2"></i> La Caída de la Morfología</h3>
+                            <p class="text-base mb-3">La <strong>Morfología</strong> es la rama de la lingüística que estudia la estructura interna de las palabras. Nos enseña que las palabras no son bloques sólidos, sino construcciones hechas de piezas más pequeñas llamadas <strong>monemas</strong>.</p>
+                            <p class="text-base">Si perdemos la capacidad de comprender cómo un prefijo como <em>"des-"</em> o un sufijo como <em>"-ble"</em> alteran la raíz de una palabra, perderemos nuestra capacidad de crear nuevos conceptos. El lenguaje se volverá primitivo.</p>
+                        </div>
+                        <p class="font-bold text-xl text-center text-emerald-300 glitch-text mt-8 code-font">Misión: Recompilar el código morfológico y reiniciar el sistema.</p>
+                    </div>
+                </div>
+                <div class="text-center pb-8">
+                    <button onclick="switchNode(1)" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-4 px-10 rounded-lg flex items-center gap-3 mx-auto transition shadow-[0_0_15px_rgba(16,185,129,0.4)] text-lg">
+                        INICIAR CONEXIÓN CON EL NODO 1 <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- NODE 1: MONEMAS -->
+            <div id="node-1" class="module-content max-w-4xl mx-auto">
+                <div class="flex justify-between items-center border-b border-slate-700 pb-2 mb-6">
+                    <h2 class="text-3xl text-emerald-400 font-bold code-font">NODO 1: Lexemas y Morfemas</h2>
+                </div>
+
+                <!-- Tabs -->
+                <div class="flex mb-6 border-b border-slate-700 overflow-x-auto">
+                    <button class="tab-btn active px-6 py-3 font-semibold transition whitespace-nowrap" onclick="switchTab(1, 'teoria')"><i class="fa-solid fa-book-open mr-2"></i>Base de Datos Teórica</button>
+                    <button class="tab-btn px-6 py-3 font-semibold transition text-slate-400 whitespace-nowrap" onclick="switchTab(1, 'reto')"><i class="fa-solid fa-terminal mr-2 text-amber-400"></i>Terminal de Hackeo</button>
+                </div>
+
+                <!-- Teoría 1 -->
+                <div id="tab-1-teoria" class="space-y-8 pb-8">
+                    <div class="bg-slate-900 p-4 border border-slate-700 rounded-lg">
+                        <p class="mb-3 text-emerald-400 font-bold text-sm"><i class="fa-brands fa-youtube mr-2 text-red-500 text-lg"></i> Videolección: Clases Particulares en Ávila</p>
+                        <div class="relative w-full overflow-hidden rounded-lg shadow-lg border border-slate-800" style="padding-top: 56.25%;">
+                            <iframe class="absolute top-0 left-0 w-full h-full" src="https://www.youtube.com/embed?listType=search&list=Clases+particulares+en+Avila+lexemas+y+morfemas" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                        </div>
+                    </div>
+
+                    <div class="bg-emerald-900/10 p-5 border-l-4 border-emerald-500 rounded text-lg leading-relaxed text-slate-300">
+                        Las palabras se pueden dividir en unidades más pequeñas con significado (ya sea léxico o gramatical) llamadas <strong>Monemas</strong>. Existen dos grandes tipos:
+                    </div>
+                    
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <div class="bg-slate-800 p-6 rounded-lg border-t-4 border-amber-500 shadow-md">
+                            <h3 class="font-bold text-amber-400 text-2xl mb-3">1. Lexema (o Raíz)</h3>
+                            <p class="text-sm text-slate-300 mb-4">Es la parte invariable de la palabra que aporta el <strong>significado principal o de diccionario</strong>. Contiene la esencia del concepto.</p>
+                            <div class="bg-slate-900 p-3 rounded border border-slate-700 font-mono text-sm">
+                                <span class="text-amber-400 font-bold">NIÑ</span>-o, <span class="text-amber-400 font-bold">NIÑ</span>-ato, a-<span class="text-amber-400 font-bold">NIÑ</span>-ado.<br>
+                                <span class="text-amber-400 font-bold">CANT</span>-ar, <span class="text-amber-400 font-bold">CANT</span>-ante.
+                            </div>
+                        </div>
+
+                        <div class="bg-slate-800 p-6 rounded-lg border-t-4 border-cyan-500 shadow-md">
+                            <h3 class="font-bold text-cyan-400 text-2xl mb-3">2. Morfemas</h3>
+                            <p class="text-sm text-slate-300 mb-4">Se añaden al lexema para modificar su significado o para añadir información puramente gramatical. Se dividen en dos grupos vitales:</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-800 p-6 rounded-lg border border-slate-700 shadow-xl mt-6">
+                        <h4 class="font-bold text-white text-xl border-b border-slate-700 pb-2 mb-4">Clasificación de los Morfemas</h4>
+                        <div class="space-y-6">
+                            <div>
+                                <h5 class="font-bold text-emerald-400 mb-1"><i class="fa-solid fa-cogs mr-2"></i>A) Morfemas Flexivos (o desinencias)</h5>
+                                <p class="text-sm text-slate-300 mb-2">NO crean palabras nuevas. Solo informan de accidentes gramaticales: género, número, persona, tiempo, modo...</p>
+                                <ul class="list-disc pl-6 text-sm text-slate-400 font-mono">
+                                    <li>gat-<strong>o-s</strong> (género masculino, número plural)</li>
+                                    <li>cant-<strong>ábamos</strong> (tiempo, modo, aspecto, persona, número)</li>
+                                </ul>
+                            </div>
+                            <div>
+                                <h5 class="font-bold text-purple-400 mb-1"><i class="fa-solid fa-flask mr-2"></i>B) Morfemas Derivativos (Afijos)</h5>
+                                <p class="text-sm text-slate-300 mb-2">SÍ modifican el significado de la raíz para <strong>crear palabras nuevas</strong>. Según su posición se llaman:</p>
+                                <ul class="list-disc pl-6 text-sm text-slate-400 font-mono">
+                                    <li><strong>Prefijos</strong> (delante de la raíz): <strong>des</strong>-hacer, <strong>pre</strong>-historia.</li>
+                                    <li><strong>Sufijos</strong> (detrás de la raíz): blanc-<strong>ura</strong>, reloj-<strong>ero</strong>.</li>
+                                    <li><strong>Infijos/Interfijos</strong> (en medio, no tienen significado propio, solo unen): polv-<strong>ar</strong>-eda, pecec-<strong>ill</strong>-o.</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Reto 1 -->
+                <div id="tab-1-reto" class="hidden space-y-6 pb-8">
+                    <div class="bg-slate-900 p-5 border-l-4 border-amber-500 font-mono text-sm mb-6 rounded shadow-lg">
+                        <p class="text-amber-500 font-bold mb-2">>> SISTEMA CORRUPTO: Segmentación requerida</p>
+                        <p class="text-slate-300">El virus Null-Word ha encriptado el archivo léxico de la palabra <strong class="text-white text-lg">"DESENTERRADO"</strong>. Para desbloquear el primer segmento de la contraseña, debes realizar un análisis morfológico exacto, aislando cada monema en su categoría correcta.</p>
+                    </div>
+                    
+                    <div class="bg-slate-800 p-6 md:p-8 rounded-xl border border-slate-600 shadow-xl mt-6">
+                        <div class="text-center mb-8">
+                            <h3 class="text-3xl font-black text-white tracking-widest bg-slate-950 py-3 rounded-lg border border-slate-700">DESENTERRADO</h3>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <!-- Pieza 1 -->
+                            <div class="bg-slate-700/50 p-4 rounded border border-slate-600">
+                                <label class="text-sm text-emerald-400 font-bold block mb-2">1. Morfema Derivativo (Prefijo 1)</label>
+                                <select id="m1-p1" class="w-full bg-slate-900 text-white p-3 rounded outline-none focus:border-emerald-500 border border-slate-600">
+                                    <option value="">[Seleccionar segmento]</option>
+                                    <option value="de">de-</option>
+                                    <option value="des">des-</option>
+                                    <option value="desen">desen-</option>
+                                </select>
+                            </div>
+                            <!-- Pieza 2 -->
+                            <div class="bg-slate-700/50 p-4 rounded border border-slate-600">
+                                <label class="text-sm text-emerald-400 font-bold block mb-2">2. Morfema Derivativo (Prefijo 2)</label>
+                                <select id="m1-p2" class="w-full bg-slate-900 text-white p-3 rounded outline-none focus:border-emerald-500 border border-slate-600">
+                                    <option value="">[Seleccionar segmento]</option>
+                                    <option value="ninguno">[No tiene segundo prefijo]</option>
+                                    <option value="en">en-</option>
+                                    <option value="ent">ent-</option>
+                                </select>
+                            </div>
+                            <!-- Pieza 3 -->
+                            <div class="bg-slate-700/50 p-4 rounded border border-amber-500/50 shadow-[0_0_10px_rgba(245,158,11,0.2)]">
+                                <label class="text-sm text-amber-500 font-bold block mb-2">3. Lexema (Raíz)</label>
+                                <select id="m1-lex" class="w-full bg-slate-900 text-white p-3 rounded outline-none focus:border-amber-500 border border-slate-600">
+                                    <option value="">[Identificar raíz]</option>
+                                    <option value="terr">terr</option>
+                                    <option value="terra">terra</option>
+                                    <option value="enterr">enterr</option>
+                                </select>
+                                <p class="text-xs text-slate-400 mt-2 italic">Pista: Familia léxica de "tierra", "terreno"...</p>
+                            </div>
+                            <!-- Pieza 4 -->
+                            <div class="bg-slate-700/50 p-4 rounded border border-slate-600">
+                                <label class="text-sm text-purple-400 font-bold block mb-2">4. Morfemas (Sufijo + Flexivos)</label>
+                                <select id="m1-suf" class="w-full bg-slate-900 text-white p-3 rounded outline-none focus:border-purple-500 border border-slate-600">
+                                    <option value="">[Seleccionar segmentos finales]</option>
+                                    <option value="rado">-rad (suf) + -o (flex)</option>
+                                    <option value="ado">-a (VT) + -d (sufijo participio) + -o (flex. género)</option>
+                                    <option value="do">-do (sufijo)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <button onclick="checkNode1()" class="mt-8 w-full bg-emerald-700 hover:bg-emerald-600 text-white font-bold py-4 rounded-lg transition shadow-lg text-lg tracking-wide code-font">> EJECUTAR ANÁLISIS</button>
+                        <div id="r1-feedback" class="mt-4 text-center font-bold hidden p-4 rounded border code-font"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- NODE 2: FORMACIÓN DE PALABRAS -->
+            <div id="node-2" class="module-content max-w-4xl mx-auto">
+                <div class="flex justify-between items-center border-b border-slate-700 pb-2 mb-6">
+                    <h2 class="text-3xl text-emerald-400 font-bold code-font">NODO 2: Arquitectura (Formación)</h2>
+                </div>
+
+                <div class="flex mb-6 border-b border-slate-700 overflow-x-auto">
+                    <button class="tab-btn active px-6 py-3 font-semibold transition whitespace-nowrap" onclick="switchTab(2, 'teoria')"><i class="fa-solid fa-book-open mr-2"></i>Base de Datos Teórica</button>
+                    <button class="tab-btn px-6 py-3 font-semibold transition text-slate-400 whitespace-nowrap" onclick="switchTab(2, 'reto')"><i class="fa-solid fa-terminal mr-2 text-amber-400"></i>Terminal de Hackeo</button>
+                </div>
+
+                <!-- Teoría 2 -->
+                <div id="tab-2-teoria" class="space-y-6 pb-8">
+                    <div class="bg-slate-900 p-4 border border-slate-700 rounded-lg mb-6">
+                        <p class="mb-3 text-emerald-400 font-bold text-sm"><i class="fa-brands fa-youtube mr-2 text-red-500 text-lg"></i> Videolección: Clases Particulares en Ávila</p>
+                        <div class="relative w-full overflow-hidden rounded-lg shadow-lg border border-slate-800" style="padding-top: 56.25%;">
+                            <iframe class="absolute top-0 left-0 w-full h-full" src="https://www.youtube.com/embed?listType=search&list=Clases+particulares+en+Avila+formacion+de+palabras" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-800 p-6 rounded-lg border border-slate-700">
+                        <p class="text-lg text-slate-300 mb-6">Dependiendo de cómo combinemos los lexemas y los morfemas derivativos, clasificamos las palabras en diferentes grupos morfológicos:</p>
+                        
+                        <div class="space-y-4">
+                            <div class="border-l-4 border-slate-400 pl-4 py-2">
+                                <h3 class="font-bold text-white text-xl">1. Palabras Simples (o Primitivas)</h3>
+                                <p class="text-sm text-slate-300">Formadas por un <strong>único lexema</strong> (que puede llevar morfemas flexivos, pero NUNCA derivativos).</p>
+                                <p class="text-xs font-mono text-emerald-400 mt-1">Ejemplos: Sol, Pan, Gat-o-s, Cant-aba.</p>
+                            </div>
+
+                            <div class="border-l-4 border-blue-500 pl-4 py-2 bg-blue-900/10">
+                                <h3 class="font-bold text-blue-300 text-xl">2. Palabras Derivadas</h3>
+                                <p class="text-sm text-slate-300">Formadas por <strong>UN lexema + uno o varios morfemas derivativos</strong> (prefijos o sufijos).</p>
+                                <p class="text-xs font-mono text-emerald-400 mt-1">Ejemplos: <span class="text-blue-300">Des</span>-hacer, pan-<span class="text-blue-300">adero</span>, <span class="text-blue-300">in</span>-móv-<span class="text-blue-300">il</span>.</p>
+                            </div>
+
+                            <div class="border-l-4 border-amber-500 pl-4 py-2 bg-amber-900/10">
+                                <h3 class="font-bold text-amber-300 text-xl">3. Palabras Compuestas</h3>
+                                <p class="text-sm text-slate-300">Formadas por la <strong>unión de DOS o más lexemas</strong> (o dos raíces, o dos palabras simples).</p>
+                                <p class="text-xs font-mono text-emerald-400 mt-1">Ejemplos: saca + corchos = <span class="text-amber-300">sacacorchos</span>, peli + rojo = <span class="text-amber-300">pelirrojo</span>, tela + araña = <span class="text-amber-300">telaraña</span>.</p>
+                                <p class="text-xs text-slate-400 italic mt-2">*Nota: Pueden ser ortográficas (una sola palabra junta: "bocacalle") o sintagmáticas (separadas por guion o espacio: "físico-químico", "hombre rana").</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Reto 2 -->
+                <div id="tab-2-reto" class="hidden space-y-6 pb-8">
+                    <div class="bg-slate-900 p-5 border-l-4 border-amber-500 font-mono text-sm mb-6 rounded shadow-lg">
+                        <p class="text-amber-500 font-bold mb-2">>> SISTEMA DE CLASIFICACIÓN CORROMPIDO</p>
+                        <p class="text-slate-300">Los algoritmos de catalogación han olvidado cómo se crearon las palabras. Debes reasignar las etiquetas estructurales correctas a tres archivos vitales para obtener el código de Composición.</p>
+                    </div>
+
+                    <div class="space-y-4 max-w-2xl mx-auto mt-8">
+                        <!-- Word 1 -->
+                        <div class="bg-slate-800 p-4 rounded-lg flex flex-col md:flex-row justify-between items-center border border-slate-600 gap-4 hover:border-emerald-500 transition">
+                            <div class="text-2xl font-bold text-white tracking-wide code-font">ABRELATAS</div>
+                            <select id="w2-1" class="bg-slate-900 text-slate-300 p-2 rounded outline-none border border-slate-600 focus:border-emerald-400 w-full md:w-48">
+                                <option value="">[Clasificar]</option>
+                                <option value="simple">Simple</option>
+                                <option value="derivada">Derivada</option>
+                                <option value="compuesta">Compuesta</option>
+                            </select>
+                        </div>
+                        
+                        <!-- Word 2 -->
+                        <div class="bg-slate-800 p-4 rounded-lg flex flex-col md:flex-row justify-between items-center border border-slate-600 gap-4 hover:border-emerald-500 transition">
+                            <div class="text-2xl font-bold text-white tracking-wide code-font">ROSALEDA</div>
+                            <select id="w2-2" class="bg-slate-900 text-slate-300 p-2 rounded outline-none border border-slate-600 focus:border-emerald-400 w-full md:w-48">
+                                <option value="">[Clasificar]</option>
+                                <option value="simple">Simple</option>
+                                <option value="derivada">Derivada</option>
+                                <option value="compuesta">Compuesta</option>
+                            </select>
+                        </div>
+
+                        <!-- Word 3 -->
+                        <div class="bg-slate-800 p-4 rounded-lg flex flex-col md:flex-row justify-between items-center border border-slate-600 gap-4 hover:border-emerald-500 transition">
+                            <div class="text-2xl font-bold text-white tracking-wide code-font">AGRIDULCE</div>
+                            <select id="w2-3" class="bg-slate-900 text-slate-300 p-2 rounded outline-none border border-slate-600 focus:border-emerald-400 w-full md:w-48">
+                                <option value="">[Clasificar]</option>
+                                <option value="simple">Simple</option>
+                                <option value="derivada">Derivada</option>
+                                <option value="compuesta">Compuesta</option>
+                            </select>
+                        </div>
+
+                        <button onclick="checkNode2()" class="mt-6 w-full bg-emerald-700 hover:bg-emerald-600 text-white font-bold py-3 rounded-lg transition shadow-lg text-lg code-font">> GUARDAR CAMBIOS</button>
+                        <div id="r2-feedback" class="mt-4 text-center font-bold hidden p-4 rounded border code-font text-sm"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- NODE 3: PARASÍNTESIS -->
+            <div id="node-3" class="module-content max-w-4xl mx-auto">
+                <div class="flex justify-between items-center border-b border-slate-700 pb-2 mb-6">
+                    <h2 class="text-3xl text-emerald-400 font-bold code-font">NODO 3: El Nivel Oculto (Parasíntesis)</h2>
+                </div>
+
+                <div class="flex mb-6 border-b border-slate-700 overflow-x-auto">
+                    <button class="tab-btn active px-6 py-3 font-semibold transition whitespace-nowrap" onclick="switchTab(3, 'teoria')"><i class="fa-solid fa-book-open mr-2"></i>Base de Datos Teórica</button>
+                    <button class="tab-btn px-6 py-3 font-semibold transition text-slate-400 whitespace-nowrap" onclick="switchTab(3, 'reto')"><i class="fa-solid fa-terminal mr-2 text-amber-400"></i>Terminal de Hackeo</button>
+                </div>
+
+                <!-- Teoría 3 -->
+                <div id="tab-3-teoria" class="space-y-8 pb-8">
+                    <div class="bg-slate-900 p-4 border border-slate-700 rounded-lg mb-6">
+                        <p class="mb-3 text-emerald-400 font-bold text-sm"><i class="fa-brands fa-youtube mr-2 text-red-500 text-lg"></i> Videolección: Clases Particulares en Ávila</p>
+                        <div class="relative w-full overflow-hidden rounded-lg shadow-lg border border-slate-800" style="padding-top: 56.25%;">
+                            <iframe class="absolute top-0 left-0 w-full h-full" src="https://www.youtube.com/embed?listType=search&list=Clases+particulares+en+Avila+parasintesis" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                        </div>
+                    </div>
+
+                    <div class="bg-red-900/20 p-6 rounded-lg border-2 border-red-500/50 shadow-xl relative overflow-hidden">
+                        <h3 class="font-bold text-red-400 text-2xl mb-3"><i class="fa-solid fa-skull-crossbones mr-2"></i> ¿Qué es la Parasíntesis?</h3>
+                        <p class="text-slate-300 mb-4">Es un proceso especial de formación que exige la **unión simultánea** de tres elementos. Si quitas uno de los extremos, la palabra que queda NO existe en el diccionario. Existen dos tipos:</p>
+                        
+                        <div class="grid md:grid-cols-2 gap-4">
+                            <div class="bg-black/50 p-4 rounded border border-slate-700">
+                                <h4 class="font-bold text-white text-lg mb-2 underline decoration-emerald-500">1. Parasíntesis por Afijación</h4>
+                                <p class="text-sm text-slate-300 mb-2">Estructura: <strong>Prefijo + Lexema + Sufijo</strong></p>
+                                <p class="text-sm font-bold text-emerald-400">Ejemplo: EN-VIUD-AR</p>
+                                <ul class="text-xs text-slate-400 mt-2 list-disc pl-4">
+                                    <li>Si quito el prefijo queda: <em>*viudar</em> (No existe)</li>
+                                    <li>Si quito el sufijo queda: <em>*enviud</em> (No existe)</li>
+                                </ul>
+                                <p class="text-xs text-amber-300 mt-2 italic">⚠️ Truco: Como no existen por separado, sabemos que los tres trozos se unieron a la vez. Es parasintética.</p>
+                            </div>
+                            
+                            <div class="bg-black/50 p-4 rounded border border-slate-700">
+                                <h4 class="font-bold text-white text-lg mb-2 underline decoration-amber-500">2. Parasíntesis por Composición</h4>
+                                <p class="text-sm text-slate-300 mb-2">Estructura: <strong>Lexema + Lexema + Sufijo</strong></p>
+                                <p class="text-sm font-bold text-emerald-400">Ejemplo: SIETE-MES-INO</p>
+                                <ul class="text-xs text-slate-400 mt-2 list-disc pl-4">
+                                    <li>Si quito el sufijo queda: <em>*sietemés</em> (No existe como palabra independiente usada)</li>
+                                    <li>Si quito el primer lexema: <em>mesino</em> (No existe)</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="mt-6 bg-slate-900 p-4 rounded border-l-4 border-blue-500">
+                            <p class="text-sm font-bold text-blue-400">Contraejemplo (Derivada, NO parasintética):</p>
+                            <p class="text-sm text-slate-300"><strong>IN-UTIL-IDAD</strong>. Si quito el prefijo queda <em>utilidad</em> (SÍ existe). Si quito el sufijo queda <em>inútil</em> (SÍ existe). Por tanto, no se unieron a la vez; primero se hizo una y luego la otra. Es derivada múltiple.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Reto 3 -->
+                <div id="tab-3-reto" class="hidden space-y-6 pb-8">
+                    <div class="bg-slate-900 p-5 border-l-4 border-amber-500 font-mono text-sm mb-6 rounded shadow-lg">
+                        <p class="text-amber-500 font-bold mb-2">> Analizador_Heurístico_Activado:</p>
+                        <p class="text-slate-300">El núcleo del virus está oculto en las palabras de mayor complejidad morfológica. He interceptado un fragmento de texto. <strong class="text-white">Debes hacer clic EXACTAMENTE sobre las TRES palabras que han sido formadas por Parasíntesis.</strong> Si te equivocas de término, el archivo se borrará.</p>
+                    </div>
+
+                    <div class="bg-slate-800 text-slate-200 p-8 md:p-10 rounded-xl text-lg leading-loose shadow-inner border border-slate-600 mt-8 font-serif">
+                        <p class="text-justify indent-8">
+                            El joven <span class="interactive-word" data-type="para" onclick="toggleWord(this)">quinceañero</span> miraba al viejo <span class="interactive-word" data-type="para" onclick="toggleWord(this)">picapedrero</span> trabajar bajo el sol abrasador. Muchos en el pueblo decían que era un hombre <span class="interactive-word" data-type="para" onclick="toggleWord(this)">desalmado</span>, solitario y huraño. Sin embargo, su trabajo era <span class="interactive-word" data-type="deriv" onclick="toggleWord(this)">incansable</span> y demostraba una gran <span class="interactive-word" data-type="deriv" onclick="toggleWord(this)">habilidad</span>. Aunque la vida le resultaba <span class="interactive-word" data-type="comp" onclick="toggleWord(this)">agridulce</span>, en el fondo tenía un corazón noble.
+                        </p>
+                    </div>
+
+                    <div class="flex flex-col md:flex-row justify-between items-center mt-6 bg-slate-900 p-4 rounded-lg border border-slate-700 gap-4">
+                        <p class="text-base text-slate-300 font-bold">Unidades Parasintéticas: <span id="word-count" class="text-2xl text-emerald-400 mx-2">0</span>/3</p>
+                        <button onclick="checkNode3()" class="w-full md:w-auto bg-emerald-700 hover:bg-emerald-600 text-white font-bold py-3 px-8 rounded-lg transition shadow-lg tracking-wide code-font">> EXTRAER CÓDIGO</button>
+                    </div>
+                    <div id="r3-feedback" class="mt-4 text-center font-bold hidden p-5 rounded-lg border code-font text-sm"></div>
+                </div>
+            </div>
+
+            <!-- NODE 4: SIGLAS -->
+            <div id="node-4" class="module-content max-w-4xl mx-auto">
+                <div class="flex justify-between items-center border-b border-slate-700 pb-2 mb-6">
+                    <h2 class="text-3xl text-emerald-400 font-bold code-font">NODO 4: Compresión Léxica</h2>
+                </div>
+
+                <div class="flex mb-6 border-b border-slate-700 overflow-x-auto">
+                    <button class="tab-btn active px-6 py-2 font-semibold transition whitespace-nowrap" onclick="switchTab(4, 'teoria')"><i class="fa-solid fa-book-open mr-2"></i>Base de Datos Teórica</button>
+                    <button class="tab-btn px-6 py-2 font-semibold transition text-slate-400 whitespace-nowrap" onclick="switchTab(4, 'reto')"><i class="fa-solid fa-terminal mr-2 text-amber-400"></i>Terminal de Hackeo</button>
+                </div>
+
+                <!-- Teoría 4 -->
+                <div id="tab-4-teoria" class="space-y-8 pb-8">
+                    <div class="bg-slate-900 p-4 border border-slate-700 rounded-lg mb-6">
+                        <p class="mb-3 text-emerald-400 font-bold text-sm"><i class="fa-brands fa-youtube mr-2 text-red-500 text-lg"></i> Videolección: Clases Particulares en Ávila</p>
+                        <div class="relative w-full overflow-hidden rounded-lg shadow-lg border border-slate-800" style="padding-top: 56.25%;">
+                            <iframe class="absolute top-0 left-0 w-full h-full" src="https://www.youtube.com/embed?listType=search&list=Clases+particulares+en+Avila+siglas+y+acronimos" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                        </div>
+                    </div>
+
+                    <div class="bg-emerald-900/10 p-5 border-l-4 border-emerald-500 rounded text-lg leading-relaxed text-slate-300">
+                        En la sociedad moderna, la economía del lenguaje es fundamental. Para ello utilizamos distintos <strong>procedimientos de reducción</strong> de palabras y expresiones largas.
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="bg-slate-800 p-5 rounded-lg border-2 border-slate-600">
+                            <h3 class="font-bold text-white text-xl mb-2 text-cyan-400">Siglas</h3>
+                            <p class="text-sm text-slate-300 mb-2">Formadas por las iniciales de varias palabras. <strong>Se leen deletreando letra por letra</strong> o son impronunciables como una sola palabra.</p>
+                            <p class="text-xs bg-slate-900 p-2 rounded text-slate-400">Ej: <strong>ONG</strong> (O-ene-ge), <strong>DNI</strong> (De-ene-i), <strong>FM</strong>.</p>
+                        </div>
+                        
+                        <div class="bg-slate-800 p-5 rounded-lg border-2 border-slate-600">
+                            <h3 class="font-bold text-white text-xl mb-2 text-purple-400">Acrónimos</h3>
+                            <p class="text-sm text-slate-300 mb-2">Son siglas que, por su estructura, <strong>se pueden leer como una palabra normal</strong> (silabeando). Muchos acaban escribiéndose en minúscula (lexicalización).</p>
+                            <p class="text-xs bg-slate-900 p-2 rounded text-slate-400">Ej: <strong>UFO</strong> -> <strong>ovni</strong>, <strong>SIDA</strong>, <strong>RAE</strong>.</p>
+                            <p class="text-xs text-slate-500 mt-1">*También son acrónimos palabras formadas por fragmentos (ej: docudrama = documental + drama).</p>
+                        </div>
+
+                        <div class="bg-slate-800 p-5 rounded-lg border-2 border-slate-600">
+                            <h3 class="font-bold text-white text-xl mb-2 text-amber-400">Acortamientos</h3>
+                            <p class="text-sm text-slate-300 mb-2">Pérdida de sílabas al final (apócope) o al principio (aféresis) de una sola palabra, muy común en registro coloquial.</p>
+                            <p class="text-xs bg-slate-900 p-2 rounded text-slate-400">Ej: <strong>Bici</strong> (bicicleta), <strong>Profe</strong> (profesor), <strong>Nando</strong> (Fernando).</p>
+                        </div>
+
+                        <div class="bg-slate-800 p-5 rounded-lg border-2 border-slate-600">
+                            <h3 class="font-bold text-white text-xl mb-2 text-red-400">Abreviaturas</h3>
+                            <p class="text-sm text-slate-300 mb-2">Reducción gráfica (solo en la escritura, al leer se pronuncia la palabra entera). Suelen llevar punto final.</p>
+                            <p class="text-xs bg-slate-900 p-2 rounded text-slate-400">Ej: <strong>Sr.</strong> (señor), <strong>pág.</strong> (página), <strong>Avda.</strong> (avenida).</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Reto 4 -->
+                <div id="tab-4-reto" class="hidden space-y-6 pb-8">
+                    <div class="bg-slate-900 p-5 border-l-4 border-amber-500 font-mono text-sm mb-6 rounded shadow-lg">
+                        <p class="text-amber-500 font-bold mb-2">> Null-Word_Protocol: Destrucción de Identificadores</p>
+                        <p class="text-slate-300">El virus está atacando la base de datos de instituciones nacionales e internacionales. Para detenerlo, debes identificar correctamente qué tipo de reducción es la palabra <strong class="text-white text-xl">"UNESCO"</strong> (Organización de las Naciones Unidas para la Educación, la Ciencia y la Cultura).</p>
+                    </div>
+
+                    <div class="space-y-4 mt-6">
+                        <label class="block bg-slate-800 p-6 rounded-lg border-2 border-slate-600 cursor-pointer hover:border-emerald-500 transition shadow-md group">
+                            <div class="flex items-start gap-4">
+                                <input type="radio" name="reduccion" value="sigla" class="mt-2 shrink-0 w-5 h-5 accent-emerald-500">
+                                <div>
+                                    <span class="font-bold text-white text-lg block mb-1">A) Es una Sigla pura</span>
+                                    <span class="text-slate-400 text-sm">Se pronuncia deletreando cada letra (U-ene-e-ese-ce-o).</span>
+                                </div>
+                            </div>
+                        </label>
+                        
+                        <label class="block bg-slate-800 p-6 rounded-lg border-2 border-slate-600 cursor-pointer hover:border-emerald-500 transition shadow-md group">
+                            <div class="flex items-start gap-4">
+                                <input type="radio" name="reduccion" value="acronimo" class="mt-2 shrink-0 w-5 h-5 accent-emerald-500">
+                                <div>
+                                    <span class="font-bold text-white text-lg block mb-1">B) Es un Acrónimo</span>
+                                    <span class="text-slate-400 text-sm">Es una sigla pero, por su estructura silábica, se puede leer fluidamente como una palabra normal (U-nes-co).</span>
+                                </div>
+                            </div>
+                        </label>
+
+                        <label class="block bg-slate-800 p-6 rounded-lg border-2 border-slate-600 cursor-pointer hover:border-emerald-500 transition shadow-md group">
+                            <div class="flex items-start gap-4">
+                                <input type="radio" name="reduccion" value="acortamiento" class="mt-2 shrink-0 w-5 h-5 accent-emerald-500">
+                                <div>
+                                    <span class="font-bold text-white text-lg block mb-1">C) Es un Acortamiento</span>
+                                    <span class="text-slate-400 text-sm">Se ha cortado la parte final de una palabra larga de registro coloquial.</span>
+                                </div>
+                            </div>
+                        </label>
+                    </div>
+
+                    <button onclick="checkNode4()" class="mt-8 w-full bg-emerald-700 hover:bg-emerald-600 text-white font-bold py-4 rounded-lg transition shadow-lg text-lg tracking-wide code-font">> CONFIRMAR IDENTIFICADOR</button>
+                    <div id="r4-feedback" class="mt-4 text-center font-bold hidden p-5 rounded-lg border code-font text-sm"></div>
+                </div>
+            </div>
+
+            <!-- TERMINAL FINAL -->
+            <div id="node-5" class="module-content max-w-2xl mx-auto mt-10 pb-12">
+                <div class="bg-black border-2 border-amber-500 rounded-2xl p-8 md:p-12 shadow-[0_0_40px_rgba(245,158,11,0.3)] relative overflow-hidden">
+                    <div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-20"></div>
+                    
+                    <div class="relative z-10 text-center">
+                        <i class="fa-solid fa-database text-7xl text-amber-500 mb-6 animate-pulse drop-shadow-[0_0_15px_rgba(245,158,11,0.8)]"></i>
+                        <h2 class="text-3xl md:text-4xl font-extrabold text-white code-font mb-4">NÚCLEO DEL DICCIONARIO</h2>
+                        <p class="text-slate-300 mb-10 text-lg">El virus Null-Word ha sido acorralado. Introduce la secuencia morfológica de 4 caracteres obtenida para compilar el parche final y salvar el lenguaje español.</p>
+
+                        <div class="flex justify-center gap-3 md:gap-5 mb-10" id="final-code-inputs">
+                            <input type="text" maxlength="1" class="w-16 h-20 md:w-20 md:h-24 text-center text-4xl md:text-5xl font-extrabold bg-slate-900 border-b-4 border-amber-600 text-amber-400 focus:border-emerald-400 focus:outline-none uppercase code-font shadow-inner transition-all hover:bg-slate-800">
+                            <input type="text" maxlength="1" class="w-16 h-20 md:w-20 md:h-24 text-center text-4xl md:text-5xl font-extrabold bg-slate-900 border-b-4 border-amber-600 text-amber-400 focus:border-emerald-400 focus:outline-none uppercase code-font shadow-inner transition-all hover:bg-slate-800">
+                            <input type="text" maxlength="1" class="w-16 h-20 md:w-20 md:h-24 text-center text-4xl md:text-5xl font-extrabold bg-slate-900 border-b-4 border-amber-600 text-amber-400 focus:border-emerald-400 focus:outline-none uppercase code-font shadow-inner transition-all hover:bg-slate-800">
+                            <input type="text" maxlength="1" class="w-16 h-20 md:w-20 md:h-24 text-center text-4xl md:text-5xl font-extrabold bg-slate-900 border-b-4 border-amber-600 text-amber-400 focus:border-emerald-400 focus:outline-none uppercase code-font shadow-inner transition-all hover:bg-slate-800">
+                        </div>
+
+                        <button id="btn-final" onclick="checkFinalCode()" class="w-full md:w-auto bg-amber-600 hover:bg-amber-500 border-2 border-amber-400 text-slate-900 font-black py-4 px-12 md:px-16 rounded-lg tracking-widest transition-all transform hover:scale-105 active:scale-95 shadow-[0_0_25px_rgba(245,158,11,0.4)] text-xl code-font">
+                            >> COMPILAR PARCHE
+                        </button>
+
+                        <div id="final-success" class="hidden mt-10 bg-emerald-900/80 border-2 border-emerald-500 p-8 rounded-xl text-left shadow-[0_0_30px_rgba(16,185,129,0.3)]">
+                            <h3 class="text-emerald-400 font-black text-2xl md:text-3xl mb-4 code-font">>_ CÓDIGO ACEPTADO. SISTEMA RESTAURADO.</h3>
+                            <p class="text-white text-base md:text-lg leading-relaxed">El diccionario y las reglas de formación léxica han sido restablecidos con éxito.</p>
+                            <p class="text-slate-200 text-base md:text-lg leading-relaxed mt-3">Has demostrado tu dominio sobre la estructura de las palabras: segmentación en monemas, procesos de derivación y composición, la compleja parasíntesis y la creación de acrónimos.</p>
+                            <div class="mt-8 text-center">
+                                <span class="bg-gradient-to-r from-emerald-600 to-cyan-600 text-white px-8 py-3 rounded-full font-black tracking-widest uppercase shadow-lg inline-block transform hover:scale-105 transition-transform cursor-default">
+                                    <i class="fa-solid fa-award mr-2 text-xl"></i> ¡Nivel: Arquitecto del Léxico!
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Scripts and Logic -->
+    <script>
+        // State Management
+        let unlockedNodes = [0, 1]; // Node 0 and 1 are unlocked initially
+        let obtainedCodes = ['_', '_', '_', '_'];
+        const FINAL_PASSWORD = "R C P A".replace(/ /g, ""); // R(Raiz), C(Composicion), P(Parasintesis), A(Acronimo) -> RCPA
+
+        function updateMasterCode() {
+            document.getElementById('master-code').innerText = obtainedCodes.join(' ');
+        }
+
+        function unlockNode(nodeId) {
+            if (!unlockedNodes.includes(nodeId)) {
+                unlockedNodes.push(nodeId);
+                const navBtn = document.getElementById(`nav-node-${nodeId}`);
+                const lockIcon = document.getElementById(`lock-${nodeId}`);
+                
+                navBtn.classList.remove('locked-node');
+                lockIcon.classList.remove('fa-lock', 'text-red-500');
+                lockIcon.classList.add('fa-lock-open', 'text-emerald-500');
+
+                // Decrease threat level
+                const threatBar = document.getElementById('threat-level');
+                const threatText = document.getElementById('threat-text');
+                const threatLevels = ['100%', '75%', '50%', '25%', '0%'];
+                threatBar.style.width = threatLevels[nodeId-1];
+                
+                if(nodeId === 5) {
+                    threatBar.className = "bg-emerald-500 h-full transition-all duration-1000";
+                    threatText.innerText = "Corrupción: Limpiada";
+                    threatText.className = "text-xs text-emerald-400 mt-1 text-right code-font";
+                } else {
+                    threatText.innerText = `Corrupción: ${threatLevels[nodeId-1]}`;
+                }
+            }
+        }
+
+        // Navigation
+        function switchNode(nodeId) {
+            if (!unlockedNodes.includes(nodeId)) {
+                alert("NODO BLOQUEADO. Supera el nodo anterior para obtener los permisos de acceso.");
+                return;
+            }
+            document.querySelectorAll('.module-content').forEach(el => el.classList.remove('active'));
+            document.getElementById(`node-${nodeId}`).classList.add('active');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // Tabs
+        function switchTab(nodeId, tabName) {
+            const tabs = document.querySelectorAll(`#node-${nodeId} .tab-btn`);
+            tabs.forEach(btn => btn.classList.remove('active', 'border-emerald-500', 'text-emerald-400'));
+            event.currentTarget.classList.add('active', 'border-emerald-500', 'text-emerald-400');
+
+            document.getElementById(`tab-${nodeId}-teoria`).classList.add('hidden');
+            document.getElementById(`tab-${nodeId}-reto`).classList.add('hidden');
+            
+            document.getElementById(`tab-${nodeId}-${tabName}`).classList.remove('hidden');
+        }
+
+        // Check Node 1 (Monemas)
+        function checkNode1() {
+            const p1 = document.getElementById('m1-p1').value;
+            const p2 = document.getElementById('m1-p2').value;
+            const lex = document.getElementById('m1-lex').value;
+            const suf = document.getElementById('m1-suf').value;
+            const fb = document.getElementById('r1-feedback');
+
+            fb.classList.remove('hidden', 'bg-emerald-900/50', 'text-emerald-400', 'border-emerald-500', 'bg-red-900/50', 'text-red-400', 'border-red-500');
+
+            if (p1 === 'des' && p2 === 'en' && lex === 'terr' && suf === 'ado') {
+                fb.classList.add('bg-emerald-900/50', 'text-emerald-400', 'border-emerald-500');
+                fb.innerHTML = "> SEGMENTACIÓN CORRECTA. Palabra des-en-terr-a-d-o. <br>> Código extraído: <strong class='text-xl text-white'>R</strong> (Raíz).<br>> Nodo 2 Desbloqueado en red lateral.";
+                obtainedCodes[0] = 'R';
+                updateMasterCode();
+                unlockNode(2);
+                setTimeout(() => switchNode(2), 3500);
+            } else {
+                fb.classList.add('bg-red-900/50', 'text-red-400', 'border-red-500');
+                fb.innerHTML = "> ERROR DE SEGMENTACIÓN. <br>Recuerda: la palabra tiene DOS prefijos (significa 'sacar de la tierra'), la raíz de tierra es 'terr', y al final tiene vocal temática, sufijo de participio y morfema de género (-a-d-o).";
+            }
+        }
+
+        // Check Node 2 (Formacion)
+        function checkNode2() {
+            const w1 = document.getElementById('w2-1').value;
+            const w2 = document.getElementById('w2-2').value;
+            const w3 = document.getElementById('w2-3').value;
+            const fb = document.getElementById('r2-feedback');
+            
+            fb.classList.remove('hidden', 'bg-emerald-900/50', 'text-emerald-400', 'border-emerald-500', 'bg-red-900/50', 'text-red-400', 'border-red-500');
+
+            if(w1 === '' || w2 === '' || w3 === '') {
+                fb.classList.add('bg-red-900/50', 'text-red-400', 'border-red-500');
+                fb.innerHTML = "> Faltan archivos por clasificar.";
+                return;
+            }
+
+            if (w1 === 'compuesta' && w2 === 'derivada' && w3 === 'compuesta') {
+                fb.classList.add('bg-emerald-900/50', 'text-emerald-400', 'border-emerald-500');
+                fb.innerHTML = "> CLASIFICACIÓN EXITOSA. Abre+latas (Lex+Lex), Rosal+eda (Lex+Suf), Agri+dulce (Lex+Lex). <br>> Código extraído: <strong class='text-xl text-white'>C</strong> (Composición). <br>> Nodo 3 Desbloqueado.";
+                obtainedCodes[1] = 'C';
+                updateMasterCode();
+                unlockNode(3);
+                setTimeout(() => switchNode(3), 4000);
+            } else {
+                fb.classList.add('bg-red-900/50', 'text-red-400', 'border-red-500');
+                fb.innerHTML = "> ERROR EN LA BASE DE DATOS. <br>Abrelatas y Agridulce se componen de dos palabras existentes. Rosaleda viene de Rosal mediante un sufijo (-eda: conjunto de).";
+            }
+        }
+
+        // Node 3 Logic (Parasintesis Interactive)
+        let selectedWords = [];
+        function toggleWord(element) {
+            if(element.classList.contains('selected')) {
+                element.classList.remove('selected');
+                selectedWords = selectedWords.filter(el => el !== element);
+            } else {
+                if(selectedWords.length >= 3) {
+                    selectedWords[0].classList.remove('selected');
+                    selectedWords.shift();
+                }
+                element.classList.add('selected');
+                selectedWords.push(element);
+            }
+            document.getElementById('word-count').innerText = selectedWords.length;
+        }
+
+        function checkNode3() {
+            const fb = document.getElementById('r3-feedback');
+            fb.classList.remove('hidden', 'bg-emerald-900/50', 'text-emerald-400', 'border-emerald-500', 'bg-red-900/50', 'text-red-400', 'border-red-500');
+
+            if(selectedWords.length !== 3) {
+                fb.classList.add('bg-red-900/50', 'text-red-400', 'border-red-500');
+                fb.innerHTML = "> ERROR: Debes seleccionar EXACTAMENTE 3 palabras.";
+                return;
+            }
+
+            let correctCount = 0;
+            selectedWords.forEach(el => {
+                if(el.dataset.type === 'para') correctCount++;
+            });
+
+            if(correctCount === 3) {
+                fb.classList.add('bg-emerald-900/50', 'text-emerald-400', 'border-emerald-500');
+                fb.innerHTML = "> HACKEO EXITOSO. Palabras parasintéticas detectadas (quinceañero, picapedrero, desalmado). <br>> Código extraído: <strong class='text-xl text-white'>P</strong>. <br>> Nodo 4 Desbloqueado.";
+                obtainedCodes[2] = 'P';
+                updateMasterCode();
+                unlockNode(4);
+                setTimeout(() => switchNode(4), 4500);
+            } else {
+                fb.classList.add('bg-red-900/50', 'text-red-400', 'border-red-500');
+                fb.innerHTML = "> ERROR: Falso positivo. <br>Has seleccionado palabras derivadas. Recuerda que si le quitas un extremo a una parasintética, la palabra resultante NO existe (ej. quince-año-ero -> *quinceaño no existe). Pero in-cansable -> cansable sí existe (es derivada).";
+            }
+        }
+
+        // Check Node 4 (Siglas)
+        function checkNode4() {
+            const selected = document.querySelector('input[name="reduccion"]:checked');
+            const fb = document.getElementById('r4-feedback');
+            fb.classList.remove('hidden', 'bg-emerald-900/50', 'text-emerald-400', 'border-emerald-500', 'bg-red-900/50', 'text-red-400', 'border-red-500');
+
+            if (!selected) {
+                fb.classList.add('bg-red-900/50', 'text-red-400', 'border-red-500');
+                fb.innerHTML = "> ADVERTENCIA: Debes seleccionar una opción.";
+                return;
+            }
+
+            if (selected.value === 'acronimo') {
+                fb.classList.add('bg-emerald-900/50', 'text-emerald-400', 'border-emerald-500');
+                fb.innerHTML = "> IDENTIFICACIÓN CONFIRMADA. UNESCO es una sigla pero se lee como palabra entera (U-nes-co), por lo que es un Acrónimo. <br>> Código extraído: <strong class='text-xl text-white'>A</strong>. <br>> NÚCLEO FINAL DESBLOQUEADO.";
+                obtainedCodes[3] = 'A';
+                updateMasterCode();
+                unlockNode(5);
+                setTimeout(() => switchNode(5), 4500);
+            } else {
+                fb.classList.add('bg-red-900/50', 'text-red-400', 'border-red-500');
+                if (selected.value === 'sigla') {
+                    fb.innerHTML = "> ERROR: Aunque proviene de iniciales, nadie deletrea U-N-E-S-C-O al hablar. Se lee de corrido. Revisa la teoría.";
+                } else {
+                    fb.innerHTML = "> ERROR: No es un acortamiento. No hemos 'cortado' la palabra 'Unescometría', sino que son iniciales de varias palabras inglesas unidas.";
+                }
+            }
+        }
+
+        // Final Terminal Inputs
+        const finalInputs = document.querySelectorAll('#final-code-inputs input');
+        finalInputs.forEach((input, index) => {
+            input.addEventListener('input', function() {
+                this.value = this.value.toUpperCase();
+                if (this.value.length === 1 && index < finalInputs.length - 1) {
+                    finalInputs[index + 1].focus();
+                }
+            });
+            input.addEventListener('keydown', function(e) {
+                if (e.key === 'Backspace' && this.value.length === 0 && index > 0) {
+                    finalInputs[index - 1].focus();
+                }
+            });
+        });
+
+        function checkFinalCode() {
+            let userCode = Array.from(finalInputs).map(i => i.value).join('');
+            const btn = document.getElementById('btn-final');
+
+            if(userCode === FINAL_PASSWORD) {
+                document.getElementById('final-success').classList.remove('hidden');
+                btn.style.display = 'none';
+                finalInputs.forEach(i => {
+                    i.classList.remove('border-amber-600', 'text-amber-400', 'hover:bg-slate-800');
+                    i.classList.add('border-emerald-500', 'text-emerald-400', 'bg-emerald-900/30', 'shadow-[0_0_15px_rgba(16,185,129,0.5)]');
+                    i.disabled = true;
+                });
+                
+                // Final animation scroll
+                setTimeout(() => {
+                    document.getElementById('final-success').scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 500);
+
+            } else {
+                btn.innerText = "CÓDIGO RECHAZADO";
+                btn.classList.replace('bg-amber-600', 'bg-red-600');
+                btn.classList.replace('hover:bg-amber-500', 'hover:bg-red-500');
+                btn.classList.replace('border-amber-400', 'border-red-400');
+                
+                finalInputs.forEach(i => {
+                    i.style.transform = "translateY(-5px)";
+                    setTimeout(() => i.style.transform = "translateY(5px)", 100);
+                    setTimeout(() => i.style.transform = "translateY(0)", 200);
+                });
+                
+                setTimeout(() => {
+                    btn.innerText = ">> COMPILAR PARCHE";
+                    btn.classList.replace('bg-red-600', 'bg-amber-600');
+                    btn.classList.replace('hover:bg-red-500', 'hover:bg-amber-500');
+                    btn.classList.replace('border-red-400', 'border-amber-400');
+                }, 1500);
+            }
+        }
+    </script>
+</body>
+</html>
