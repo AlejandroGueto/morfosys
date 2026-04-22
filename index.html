@@ -55,13 +55,6 @@
         .interactive-word.selected { background: rgba(16, 185, 129, 0.2); color: var(--neon-primary); border: 1px solid var(--neon-primary); padding: 0 4px; border-radius: 4px; }
         
         .locked-node { opacity: 0.5; cursor: not-allowed; filter: grayscale(100%); }
-        
-        .video-btn {
-            display: inline-flex; align-items: center; gap: 0.5rem;
-            background-color: #dc2626; color: white; padding: 0.5rem 1rem; border-radius: 0.375rem;
-            font-weight: 600; font-size: 0.875rem; transition: background-color 0.2s; text-decoration: none;
-        }
-        .video-btn:hover { background-color: #b91c1c; }
     </style>
 </head>
 <body class="flex flex-col h-screen overflow-hidden">
@@ -143,6 +136,15 @@
                             <p class="text-base mb-3">La <strong>Morfología</strong> es la rama de la lingüística que estudia la estructura interna de las palabras. Nos enseña que las palabras no son bloques sólidos, sino construcciones hechas de piezas más pequeñas llamadas <strong>monemas</strong>.</p>
                             <p class="text-base">Si perdemos la capacidad de comprender cómo un prefijo como <em>"des-"</em> o un sufijo como <em>"-ble"</em> alteran la raíz de una palabra, perderemos nuestra capacidad de crear nuevos conceptos. El lenguaje se volverá primitivo.</p>
                         </div>
+
+                        <div class="bg-slate-900/90 p-5 rounded-lg border border-slate-700 shadow-xl my-8">
+                            <h3 class="text-emerald-400 font-bold mb-3 text-xl"><i class="fa-brands fa-youtube mr-2 text-red-500"></i> Videobriefing de la Misión</h3>
+                            <p class="text-sm text-slate-300 mb-4">Antes de adentrarte en los nodos, revisa este informe visual. Contiene todas las claves sobre morfología necesarias para superar la corrupción de Null-Word.</p>
+                            <div class="relative w-full overflow-hidden rounded-lg border border-slate-800 shadow-lg" style="padding-top: 56.25%;">
+                                <iframe class="absolute top-0 left-0 w-full h-full" src="https://www.youtube.com/embed/IzBPPjYWyng" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                            </div>
+                        </div>
+
                         <p class="font-bold text-xl text-center text-emerald-300 glitch-text mt-8 code-font">Misión: Recompilar el código morfológico y reiniciar el sistema.</p>
                     </div>
                 </div>
@@ -167,13 +169,6 @@
 
                 <!-- Teoría 1 -->
                 <div id="tab-1-teoria" class="space-y-8 pb-8">
-                    <div class="bg-slate-900 p-4 border border-slate-700 rounded-lg">
-                        <p class="mb-3 text-emerald-400 font-bold text-sm"><i class="fa-brands fa-youtube mr-2 text-red-500 text-lg"></i> Videolección: Clases Particulares en Ávila</p>
-                        <div class="relative w-full overflow-hidden rounded-lg shadow-lg border border-slate-800" style="padding-top: 56.25%;">
-                            <iframe class="absolute top-0 left-0 w-full h-full" src="https://www.youtube.com/embed?listType=search&list=Clases+particulares+en+Avila+lexemas+y+morfemas" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-                        </div>
-                    </div>
-
                     <div class="bg-emerald-900/10 p-5 border-l-4 border-emerald-500 rounded text-lg leading-relaxed text-slate-300">
                         Las palabras se pueden dividir en unidades más pequeñas con significado (ya sea léxico o gramatical) llamadas <strong>Monemas</strong>. Existen dos grandes tipos:
                     </div>
@@ -293,13 +288,6 @@
 
                 <!-- Teoría 2 -->
                 <div id="tab-2-teoria" class="space-y-6 pb-8">
-                    <div class="bg-slate-900 p-4 border border-slate-700 rounded-lg mb-6">
-                        <p class="mb-3 text-emerald-400 font-bold text-sm"><i class="fa-brands fa-youtube mr-2 text-red-500 text-lg"></i> Videolección: Clases Particulares en Ávila</p>
-                        <div class="relative w-full overflow-hidden rounded-lg shadow-lg border border-slate-800" style="padding-top: 56.25%;">
-                            <iframe class="absolute top-0 left-0 w-full h-full" src="https://www.youtube.com/embed?listType=search&list=Clases+particulares+en+Avila+formacion+de+palabras" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-                        </div>
-                    </div>
-
                     <div class="bg-slate-800 p-6 rounded-lg border border-slate-700">
                         <p class="text-lg text-slate-300 mb-6">Dependiendo de cómo combinemos los lexemas y los morfemas derivativos, clasificamos las palabras en diferentes grupos morfológicos:</p>
                         
@@ -386,13 +374,6 @@
 
                 <!-- Teoría 3 -->
                 <div id="tab-3-teoria" class="space-y-8 pb-8">
-                    <div class="bg-slate-900 p-4 border border-slate-700 rounded-lg mb-6">
-                        <p class="mb-3 text-emerald-400 font-bold text-sm"><i class="fa-brands fa-youtube mr-2 text-red-500 text-lg"></i> Videolección: Clases Particulares en Ávila</p>
-                        <div class="relative w-full overflow-hidden rounded-lg shadow-lg border border-slate-800" style="padding-top: 56.25%;">
-                            <iframe class="absolute top-0 left-0 w-full h-full" src="https://www.youtube.com/embed?listType=search&list=Clases+particulares+en+Avila+parasintesis" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-                        </div>
-                    </div>
-
                     <div class="bg-red-900/20 p-6 rounded-lg border-2 border-red-500/50 shadow-xl relative overflow-hidden">
                         <h3 class="font-bold text-red-400 text-2xl mb-3"><i class="fa-solid fa-skull-crossbones mr-2"></i> ¿Qué es la Parasíntesis?</h3>
                         <p class="text-slate-300 mb-4">Es un proceso especial de formación que exige la **unión simultánea** de tres elementos. Si quitas uno de los extremos, la palabra que queda NO existe en el diccionario. Existen dos tipos:</p>
@@ -461,13 +442,6 @@
 
                 <!-- Teoría 4 -->
                 <div id="tab-4-teoria" class="space-y-8 pb-8">
-                    <div class="bg-slate-900 p-4 border border-slate-700 rounded-lg mb-6">
-                        <p class="mb-3 text-emerald-400 font-bold text-sm"><i class="fa-brands fa-youtube mr-2 text-red-500 text-lg"></i> Videolección: Clases Particulares en Ávila</p>
-                        <div class="relative w-full overflow-hidden rounded-lg shadow-lg border border-slate-800" style="padding-top: 56.25%;">
-                            <iframe class="absolute top-0 left-0 w-full h-full" src="https://www.youtube.com/embed?listType=search&list=Clases+particulares+en+Avila+siglas+y+acronimos" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-                        </div>
-                    </div>
-
                     <div class="bg-emerald-900/10 p-5 border-l-4 border-emerald-500 rounded text-lg leading-relaxed text-slate-300">
                         En la sociedad moderna, la economía del lenguaje es fundamental. Para ello utilizamos distintos <strong>procedimientos de reducción</strong> de palabras y expresiones largas.
                     </div>
